@@ -1,7 +1,7 @@
 export interface AccessoryPrice {
   accessoryPriceId: number;
   priceListId: number;
-  accessoryId: number;
+  // accessoryId: number;
   accessoriesId: number;
   priceType: string;
   amount: number;

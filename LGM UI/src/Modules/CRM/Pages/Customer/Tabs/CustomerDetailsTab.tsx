@@ -28,20 +28,35 @@ const CustomerDetailsTab: React.FC<ExtendedTabProps> = ({
   const labelStyle =
     "text-[11px] font-extrabold text-gray-500 uppercase mb-1 tracking-widest";
 
-  useEffect(() => {
-    if (data.id) return;
 
-    const generateCode = async () => {
-      try {
-        const code = await getGeneratedCustomerCode();
-        setData((prev) => ({ ...prev, customerCode: code }));
-      } catch (error) {
-        console.error("Error generating customer code", error);
+useEffect(() => {
+  if (data.id) return;
+
+  let cancelled = false;
+
+  const generateCode = async () => {
+    try {
+      const code = await getGeneratedCustomerCode();
+
+      if (!cancelled && code) {
+        setData((prev) => ({
+          ...prev,
+          customerCode: code,
+        }));
       }
-    };
+    } catch (error) {
+      console.error("Error generating customer code:", error);
+    }
+  };
 
-    generateCode();
-  }, [data.id, setData]);
+  generateCode();
+
+  return () => {
+    cancelled = true;
+  };
+}, [data.id, setData]);
+
+
 
   const fetchGroups = async () => {
     try {
@@ -241,7 +256,7 @@ const CustomerDetailsTab: React.FC<ExtendedTabProps> = ({
           />
         </div>
 
-         <div className="flex flex-col">
+        <div className="flex flex-col">
           <label className={labelStyle}>Indian Vendor/Supplier Code</label>
           <input
             className={inputStyle(false)}
@@ -251,7 +266,7 @@ const CustomerDetailsTab: React.FC<ExtendedTabProps> = ({
           />
         </div>
 
-           <div className="flex flex-col">
+        <div className="flex flex-col">
           <label className={labelStyle}>Foreign Vendor Code</label>
           <input
             className={inputStyle(false)}

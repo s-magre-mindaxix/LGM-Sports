@@ -7,7 +7,7 @@ interface Props {
   options: { value: number; label: string }[];
   value?: number;
   onChange: (val: number | undefined) => void;
-  onAdd: () => void;
+  onAdd?: () => void;
 }
 
 // Check: Must be "export const"
@@ -41,13 +41,13 @@ export const SearchableSelect: React.FC<Props> = ({
         }}
         menuPortalTarget={document.body}
       />
-      <button
+      {onAdd && <button
         type="button"
         onClick={onAdd}
         className={buttonStyles.add}
       >
         Add
-      </button>
+      </button>}
     </div>
   </div>
 );

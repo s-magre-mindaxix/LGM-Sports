@@ -1,11 +1,6 @@
 // Inside App.tsx
 
-import {
-  createBrowserRouter,
-  RouterProvider,
-  Navigate,
-} from "react-router-dom";
-
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Login from "./Modules/HRMS/Pages/Auth/Login";
 import ProtectedRoute from "./Modules/HRMS/Pages/Auth/ProtectedRoute";
 import HomeHub from "./Pages/HomeHub";
@@ -65,7 +60,7 @@ import EmployeeMaster from "./Modules/CRM/Pages/Employee/EmployeeMaster";
 import CustomerPage from "./Modules/CRM/Pages/Customer/CustomerPage";
 import ProductGroupPage from "./Modules/HRMS/Pages/Masters/ProductGroup/ProductGroupPage";
 import ProductTypePage from "./Modules/HRMS/Pages/Masters/ProductTypes/ProductTypePage";
-import ProductVariantPage from "./Modules/HRMS/Pages/Masters/ProductVariant/ProductVariantPage";
+
 import ProductVersionPage from "./Modules/HRMS/Pages/Masters/ProductVersion/ProductVersionPage";
 import PartConditionPage from "./Modules/HRMS/Pages/Masters/PartCondition/PartConditionPage";
 import CurrencyPage from "./Modules/CRM/Pages/Currency/CurrencyPage";
@@ -138,6 +133,7 @@ import PriceListPage from "./Modules/CRM/Pages/Inventory/PriceLists/PriceListPag
 import ProductAccessoryRulePage from "./Modules/CRM/Pages/ProductAccessoryRule/ProductAccessoryRulePage";
 import ProductBarcodePage from "./Modules/CRM/Pages/ProductBarcode/ProductBarcodePage";
 import CategoryPage from "./Modules/CRM/Pages/Category/CategoryPage";
+import ProductVariantPage from "./Modules/CRM/Pages/ProductVariant/ProductVariantPage";
 
 
 const router = createBrowserRouter([
@@ -155,11 +151,11 @@ const router = createBrowserRouter([
     element: <ResetPassword />,
     errorElement: <ErrorPage />,
   },
- {
-  path: "*",
-  element: <NotFoundPage />,
-},
- {
+  {
+    path: "*",
+    element: <NotFoundPage />,
+  },
+  {
     path: "/",
     element: (
       <ProtectedRoute>
@@ -267,7 +263,14 @@ const router = createBrowserRouter([
           </PermissionProtectedRoute>
         ),
       },
-
+ {
+        path: "master/productvariant",
+        element: (
+          <PermissionProtectedRoute formName="ProductVariant">
+            <ProductVariantPage/>
+          </PermissionProtectedRoute>
+        ),
+      },
  
       {
         path: "master/product",
@@ -782,14 +785,14 @@ const router = createBrowserRouter([
           </PermissionProtectedRoute>
         ),
       },
-      {
-        path: "product-variant",
-        element: (
-          <PermissionProtectedRoute formName="ProductVariant">
-            <ProductVariantPage />
-          </PermissionProtectedRoute>
-        ),
-      },
+      // {
+      //   path: "product-variant",
+      //   element: (
+      //     <PermissionProtectedRoute formName="ProductVariant">
+      //       <ProductVariantPage />
+      //     </PermissionProtectedRoute>
+      //   ),
+      // },
       {
         path: "product-version",
         element: (

@@ -1,4 +1,4 @@
-import logo from "../../assets/GaxceLogo-removebg.png"; 
+import logo from "../../assets/LGMLogo.png"; 
 
 export default function LogoLoader() {
   return (

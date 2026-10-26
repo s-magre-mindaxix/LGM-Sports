@@ -75,10 +75,10 @@ export const getGeneratedProductCode = async (
   const originCode = productSource === "Imported" ? 1 : 2;
 
   const res = await apiClient.get(
-    `${API_ENDPOINTS.Products}/generate-part-number?vendorId=${vendorId}&typeCode=${typeCode}&originCode=${originCode}`
+    `${API_ENDPOINTS.Products}/generate-code?vendorId=${vendorId}&typeCode=${typeCode}&originCode=${originCode}`
   );
 
-  return res.data;
+  return res.data?.productCode ?? "";
 };
 // export const getGeneratedProductCode = async (name: string): Promise<string> => {
 //     if (!name || name.length < 2) return "";
@@ -96,6 +96,10 @@ export const saveProduct = async (data: Product): Promise<void> => {
     // Keys must match the C# DTO Property names exactly
     formData.append('ProductId', (data.productId || 0).toString());
     formData.append('VendorId', data.vendorId.toString());
+    // ProductDto marks ProductCode as required; include it even though the API
+    // regenerates the final code when creating a product.
+    formData.append('ProductCode', data.productCode || '');
+    formData.append('ProductSKU', (data.productSKU || '').trim());
     formData.append('ProductName', data.productName);
     formData.append('ProductShortName', data.productShortName || '');
     formData.append('CompanyNameOfProduct', data.companyNameOfProduct || '');
@@ -103,11 +107,15 @@ export const saveProduct = async (data: Product): Promise<void> => {
     // IDs for Dropdowns
     if (data.productGroupId) formData.append('ProductGroupId', data.productGroupId.toString());
     if (data.categoryId) formData.append('CategoryId', data.categoryId.toString());
+    if (data.brandId) formData.append('BrandId', data.brandId.toString());
     if (data.productTypeId) formData.append('ProductTypeId', data.productTypeId.toString());
     if (data.variantId) formData.append('VariantId', data.variantId.toString());
     if (data.versionId) formData.append('VersionId', data.versionId.toString());
     if (data.currencyId) formData.append('CurrencyId', data.currencyId.toString());
     if (data.partConditionId) formData.append('PartConditionId', data.partConditionId.toString());
+    if (data.unitId) formData.append('UnitId', data.unitId.toString());
+    if (data.taxId) formData.append('TaxId', data.taxId.toString());
+    formData.append('PartNo', data.partNo || '');
 
     // Brief Info
     formData.append('ProductDescription', data.productDescription || '');
@@ -126,10 +134,17 @@ export const saveProduct = async (data: Product): Promise<void> => {
     // Rate Info
     formData.append('PurchasePrice', (data.purchasePrice || 0).toString());
     formData.append('SalePrice', (data.salePrice || 0).toString());
+    formData.append('MRP', (data.mrp || 0).toString());
     formData.append('TaxPreference', data.taxPreference || 'Taxable');
-    if (data.taxRateId) formData.append('TaxRateId', data.taxRateId.toString());
+    if (data.taxRateId !== undefined && data.taxRateId !== null) formData.append('TaxRateId', data.taxRateId.toString());
     formData.append('AvailableQuantity', (data.availableQuantity || 0).toString());
-    formData.append('OutOfStockWarning', (data.outOfStockWarning || 5).toString());
+    formData.append('OutOfStockWarning', (data.outOfStockWarning ?? 5).toString());
+    formData.append('MinStock', (data.minStock || 0).toString());
+    formData.append('ReorderLevel', (data.reorderLevel || 0).toString());
+    formData.append('TrackStock', String(data.trackStock ?? true));
+    formData.append('TrackSerial', String(data.trackSerial ?? false));
+    formData.append('TrackBatch', String(data.trackBatch ?? false));
+    formData.append('IsActive', String(data.isActive ?? true));
     formData.append('IsCalibration', data.isCalibration.toString());
     formData.append('CalibrationFrequency', data.isCalibration ? (data.calibrationFrequency || '') : '');
      formData.append('ProductSource', data.productSource || 'Local'); // Default to Local if empty
@@ -138,10 +153,8 @@ export const saveProduct = async (data: Product): Promise<void> => {
     formData.append('IGST', (data.igst || 0).toString());
 
     // --- 3. MULTI-CURRENCY PRICES ---
-    (data.currencyPrices || []).forEach((cp, index) => {
-        formData.append(`CurrencyPrices[${index}].CurrencyId`, cp.currencyId.toString());
-        formData.append(`CurrencyPrices[${index}].Price`, cp.price.toString());
-    });
+    // ProductsController binds a ProductFormDto and deserializes this JSON field.
+    formData.append('CurrencyPricesJson', JSON.stringify(data.currencyPrices || []));
     // Handle Image File
     if (data.productImageFile instanceof File) {
         formData.append('ProductImageFile', data.productImageFile);
