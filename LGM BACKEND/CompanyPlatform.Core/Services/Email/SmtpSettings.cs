@@ -1,0 +1,13 @@
+﻿namespace PayrollManagementAPI.Services.Email
+{
+    public class SmtpSettings
+    {
+        public string Server { get; set; }
+        public int Port { get; set; }
+        public string SenderEmail { get; set; }
+        public string SenderPassword { get; set; }
+        public bool EnableSsl { get; set; }
+        public string FromName { get; set; }
+        public string ReplyToEmail { get; set; }
+    }
+}

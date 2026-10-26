@@ -1,0 +1,57 @@
+
+# ==============================
+# .NET BACKEND
+# ==============================
+**/bin/
+**/obj/
+**/.vs/
+*.user
+*.suo
+*.cache
+
+# ASP.NET secrets and credentials
+**/appsettings.Development.json
+**/secrets.json
+**/*.pfx
+**/*.key
+
+# ==============================
+# REACT / VITE FRONTEND
+# ==============================
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+
+# ==============================
+# ENVIRONMENT FILES
+# ==============================
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+
+# ==============================
+# LOGS
+# ==============================
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+**/TestResults/
+
+# ==============================
+# EDITORS AND OPERATING SYSTEM
+# ==============================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==============================
+# TEMPORARY FILES
+# ==============================
+*.tmp
+*.bak

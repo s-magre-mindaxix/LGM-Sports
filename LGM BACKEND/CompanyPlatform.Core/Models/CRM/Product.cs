@@ -1,0 +1,180 @@
+﻿
+using CompanyPlatform.Core.Models.Commonmaster;
+using CompanyPlatform.Core.Models.CRM.Dashboards;
+using CompanyPlatform.Core.Models.Inventory;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace CompanyPlatform.Core.Models.CRM
+{
+    [Table("Tbl_Products")]
+    public class Product
+    {
+        [Key]
+        public int ProductId { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public string ProductCode { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(50)]
+        public string ProductSKU { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(150)]
+        public string ProductName { get; set; } = string.Empty;
+
+        public string? ProductImage { get; set; }
+
+    
+
+        public string? ProductShortName { get; set; }
+
+        public string? CompanyNameOfProduct { get; set; }
+
+        public int? ProductGroupId { get; set; }
+
+        [ForeignKey(nameof(ProductGroupId))]
+        public virtual ProductGroup? ProductGroup { get; set; }
+
+        public int? CategoryId { get; set; }
+
+        [ForeignKey(nameof(CategoryId))]
+        public virtual Category? Category { get; set; }
+
+        public int? BrandId { get; set; }
+
+        [ForeignKey(nameof(BrandId))]
+        public virtual Brand? Brand { get; set; }
+
+        public int? ProductTypeId { get; set; }
+
+        [ForeignKey(nameof(ProductTypeId))]
+        public virtual ProductType? ProductType { get; set; }
+
+        //public int? VariantId { get; set; }
+
+        //[ForeignKey(nameof(VariantId))]
+        //public virtual ProductVariant? Variant { get; set; }
+
+        public int? VersionId { get; set; }
+
+        [ForeignKey(nameof(VersionId))]
+        public virtual ProductVersion? Version { get; set; }
+
+        public int? CurrencyId { get; set; }
+
+        [ForeignKey(nameof(CurrencyId))]
+        public virtual Currency? Currency { get; set; }
+
+        public int? PartConditionId { get; set; }
+
+        [ForeignKey(nameof(PartConditionId))]
+        public virtual PartCondition? PartCondition { get; set; }
+
+        public int? UnitId { get; set; }
+
+        [ForeignKey(nameof(UnitId))]
+        public virtual Unit? Unit { get; set; }
+
+        public int? TaxId { get; set; }
+
+        [ForeignKey(nameof(TaxId))]
+        public virtual Tax? Tax { get; set; }
+
+        public int? TaxRateId { get; set; }
+
+        public string? ProductDescription { get; set; }
+
+        public string? Specification { get; set; }
+
+        public DateTime? ManufacturingDate { get; set; }
+
+        public DateTime? ExpiryDate { get; set; }
+
+        public string? WarrantyPeriod { get; set; }
+
+        [StringLength(20)]
+        public string? HSNCode { get; set; }
+
+        [NotMapped]
+        public string? HSN
+        {
+            get => HSNCode;
+            set => HSNCode = value;
+        }
+
+        public string? UOM { get; set; }
+
+        public string? HasAccessories { get; set; }
+
+        public string? MapAccessories { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal PurchasePrice { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal SalePrice { get; set; }
+
+        [NotMapped]
+        public decimal SellingPrice
+        {
+            get => SalePrice;
+            set => SalePrice = value;
+        }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal MRP { get; set; }
+
+        public string? TaxPreference { get; set; }
+
+        public int AvailableQuantity { get; set; }
+
+        public int OutOfStockWarning { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal MinStock { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal ReorderLevel { get; set; }
+
+        public bool TrackStock { get; set; } = true;
+
+        public bool TrackSerial { get; set; } = false;
+
+        public bool TrackBatch { get; set; } = false;
+
+        public bool IsActive { get; set; } = true;
+
+        public bool IsCalibration { get; set; } = false;
+
+        public string? CalibrationFrequency { get; set; }
+
+        public bool IsDeleted { get; set; } = false;
+
+        public string ProductSource { get; set; } = "Local";
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? BCD { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? SWS { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? IGST { get; set; }
+
+        public string? PartNo { get; set; }
+
+        public int? VendorId { get; set; }
+
+        [ForeignKey(nameof(VendorId))]
+        public virtual Vendor? Vendor { get; set; }
+
+        public virtual ICollection<ProductCurrencyPrice> CurrencyPrices
+        {
+            get;
+            set;
+        } = new List<ProductCurrencyPrice>();
+    }
+}
