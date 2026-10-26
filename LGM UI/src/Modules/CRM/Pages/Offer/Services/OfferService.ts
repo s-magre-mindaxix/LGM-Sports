@@ -6,7 +6,7 @@ import type { Offer, OfferListItem } from "./types";
 const getOffersUrl = () => {
     if (!API_ENDPOINTS.Offers) {
         console.error("CRITICAL ERROR: API_ENDPOINTS.Offers is undefined! Please check apiConfig.ts");
-        return "https://localhost:44363/api/Offers"; // Hardcoded fallback for testing
+        return "https://shankarma7-001-site1.itempurl.com/api/Offers"; // Fallback
     }
     return API_ENDPOINTS.Offers;
 };

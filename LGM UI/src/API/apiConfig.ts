@@ -1,6 +1,6 @@
-const BASE_URL = "https://localhost:7296/api";
+const BASE_URL = "https://shankarma7-001-site1.itempurl.com/api";
+// const BASE_URL = "https://localhost:7296/api";
 // const BASE_URL = "https://gaxceapi.gaxce.com/api";
-// const BASE_URL = "https://shankarma7-001-site1.itempurl.com/api";
 
 export const API_ENDPOINTS = {
   // ExchangeRate: `https://v6.exchangerate-api.com/v6/c1d2fd789cda1a02192b1c64/latest/INR`,
@@ -151,6 +151,7 @@ ProductAccessoryRule: `${BASE_URL}/ProductAccessoryRule`,
   Currency: `${BASE_URL}/Currencies`,
   Products: `${BASE_URL}/Products`,
   Accessories: `${BASE_URL}/Accessories`,
+  Accessory: `${BASE_URL}/Accessories`,
   Enquiries: `${BASE_URL}/Enquiries`,
   CompanyBanks: `${BASE_URL}/Company/bank-details/all`,
   Inventory: `${BASE_URL}/Inventory`,
