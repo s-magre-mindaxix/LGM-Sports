@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -16,11 +17,6 @@ namespace CompanyPlatform.Core.Models.CRM
         [ForeignKey(nameof(PriceListId))]
         public virtual PriceList PriceList { get; set; } = null!;
 
-        [Required]
-        public int AccessoryId { get; set; }
-
-        // Update the type/namespace if your existing
-        // Accessory model is located elsewhere.
         [Required]
         public int AccessoriesId { get; set; }
 

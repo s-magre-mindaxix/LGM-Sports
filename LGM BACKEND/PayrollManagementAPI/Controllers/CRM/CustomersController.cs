@@ -16,7 +16,7 @@ namespace CompanyPlatform.API.Controllers
             _customerService = customerService;
         }
 
-
+        // GET: api/Customer
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -24,7 +24,7 @@ namespace CompanyPlatform.API.Controllers
             return Ok(customers);
         }
 
-
+        // GET: api/Customer/5
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -41,11 +41,30 @@ namespace CompanyPlatform.API.Controllers
             return Ok(customer);
         }
 
+        // GET: api/Customer/generate-code
+        [HttpGet("generate-code")]
+        public async Task<IActionResult> GenerateCode()
+        {
+            try
+            {
+                var code = await _customerService.GenerateCustomerCodeAsync();
+                return Ok(code);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "Failed to generate customer code.",
+                    detail = ex.Message
+                });
+            }
+        }
 
+        // POST: api/Customer
         [HttpPost]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Create(
-    [FromForm] CreateCustomerDto dto)
+            [FromForm] CreateCustomerDto dto)
         {
             try
             {
@@ -63,6 +82,7 @@ namespace CompanyPlatform.API.Controllers
             }
         }
 
+        // PUT: api/Customer/5
         [HttpPut("{id:int}")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(
@@ -81,7 +101,10 @@ namespace CompanyPlatform.API.Controllers
                     });
                 }
 
-                return Ok(new { message = "Customer updated successfully." });
+                return Ok(new
+                {
+                    message = "Customer updated successfully."
+                });
             }
             catch (ArgumentException ex)
             {
@@ -89,7 +112,7 @@ namespace CompanyPlatform.API.Controllers
             }
         }
 
-
+        // DELETE: api/Customer/5
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {

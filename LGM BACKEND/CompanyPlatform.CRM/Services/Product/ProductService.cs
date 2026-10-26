@@ -39,7 +39,7 @@ namespace CompanyPlatform.CRM.Services.Product
             string vendorNumber = vendor.VendorCode.Substring(
                 vendor.VendorCode.Length - 2);
 
-            string prefix = $"GX{vendorNumber}{typeCode:D2}{originCode:D2}";
+            string prefix = $"LGM{vendorNumber}{typeCode:D2}{originCode:D2}";
 
             var lastRecord = await _context.Tbl_Products
                 .Where(p => p.ProductCode.StartsWith(prefix))
