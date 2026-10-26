@@ -14,6 +14,7 @@ namespace CompanyPlatform.Core.Services.CRM
 
         Task<bool> UpdateAsync(
             int id, UpdateCustomerDto dto);
+
         Task<string> GenerateCustomerCodeAsync();
         Task<bool> DeleteAsync(int id);
     }

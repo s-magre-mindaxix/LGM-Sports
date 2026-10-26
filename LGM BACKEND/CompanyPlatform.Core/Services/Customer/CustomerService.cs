@@ -170,7 +170,7 @@ namespace CompanyPlatform.Core.Services.CRM
 
             var highestNumber = existingCodes
                 .Where(code =>
-                    code.StartsWith("CUS", StringComparison.OrdinalIgnoreCase))
+                    code.StartsWith("LGM-CUST", StringComparison.OrdinalIgnoreCase))
                 .Select(code =>
                 {
                     var numberPart = code.Substring(3);
@@ -182,7 +182,7 @@ namespace CompanyPlatform.Core.Services.CRM
                 .DefaultIfEmpty(0)
                 .Max();
 
-            return $"CUS{highestNumber + 1:D4}";
+            return $"LGM-CUST{highestNumber + 1:D4}";
         }
     }
 }
