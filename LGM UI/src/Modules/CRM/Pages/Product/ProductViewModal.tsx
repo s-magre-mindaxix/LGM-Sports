@@ -93,7 +93,9 @@ const ProductViewModal: React.FC<ViewModalProps> = ({ product, onClose, options 
                             />
                             <DataItem label="Product Group" value={getLabel(options?.groups, product?.productGroupId)} />
                             <DataItem label="Category" value={getLabel(options?.categories, product?.categoryId)} />
+                            <DataItem label="Brand" value={getLabel(options?.brands, product?.brandId)} />
                             <DataItem label="Product Type" value={getLabel(options?.types, product?.productTypeId)} />
+                            <DataItem label="SKU" value={product?.productSKU} />
                             <DataItem label="Manufacturer" value={product?.companyNameOfProduct} />
                             <DataItem label="Calibration" value={product?.isCalibration ? `YES (${product.calibrationFrequency})` : "NO"} />
                         </section>
@@ -104,6 +106,8 @@ const ProductViewModal: React.FC<ViewModalProps> = ({ product, onClose, options 
                             <DataItem label="Version" value={getLabel(options?.versions, product?.versionId)} />
                             {/* <DataItem label="Part Unique No" value={product?.partUnique} /> */}
                             <DataItem label="Condition" value={getLabel(options?.conditions, product?.partConditionId)} />
+                            <DataItem label="Part Number" value={product?.partNo} />
+                            <DataItem label="Unit" value={getLabel(options?.units, product?.unitId)} />
                             <DataItem label="Warranty" value={product?.warrantyPeriod} />
                         </section>
 
@@ -112,7 +116,9 @@ const ProductViewModal: React.FC<ViewModalProps> = ({ product, onClose, options 
                             <DataItem label="Purchase Price" value={`₹ ${product?.purchasePrice?.toLocaleString()}`} />
                             <DataItem label="Sale Price (Base)" value={`₹ ${product?.salePrice?.toLocaleString()}`} />
                             <DataItem label="Tax Preference" value={product?.taxPreference} />
+                            <DataItem label="Tax" value={getLabel(options?.taxes, product?.taxId)} />
                             <DataItem label="Tax Rate (GST)" value={getTaxRateLabel(product?.taxRateId)} />
+                            <DataItem label="MRP" value={`₹ ${product?.mrp?.toLocaleString()}`} />
 
                             {product?.productSource === 'Imported' && (
                                 <div className="mt-2 bg-blue-50 p-2 rounded border border-blue-100 grid grid-cols-3 gap-2">
@@ -127,6 +133,12 @@ const ProductViewModal: React.FC<ViewModalProps> = ({ product, onClose, options 
                             <SectionHeader icon={FaWarehouse} title="Inventory Status" />
                             <DataItem label="Available Qty" value={product?.availableQuantity} />
                             <DataItem label="Low Stock Warning" value={product?.outOfStockWarning} />
+                            <DataItem label="Minimum Stock" value={product?.minStock} />
+                            <DataItem label="Reorder Level" value={product?.reorderLevel} />
+                            <DataItem label="Stock Tracking" value={product?.trackStock ? "Yes" : "No"} />
+                            <DataItem label="Serial Tracking" value={product?.trackSerial ? "Yes" : "No"} />
+                            <DataItem label="Batch Tracking" value={product?.trackBatch ? "Yes" : "No"} />
+                            <DataItem label="Active" value={product?.isActive ? "Yes" : "No"} />
                             <DataItem label="UOM" value={product?.uom} />
                             <DataItem label="HSN/SAC Code" value={product?.hsnCode} />
                         </section>

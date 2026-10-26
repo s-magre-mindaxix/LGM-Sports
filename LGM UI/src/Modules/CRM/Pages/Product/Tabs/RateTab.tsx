@@ -84,6 +84,11 @@ const RateTab: React.FC<TabProps> = ({
         </div>
 
         <div className="flex flex-col">
+          <label className="text-[11px] font-extrabold text-gray-500 uppercase mb-1">MRP</label>
+          <input type="number" className={inputStyle} value={data.mrp} onChange={(e) => setData({ ...data, mrp: parseFloat(e.target.value) || 0 })} />
+        </div>
+
+        <div className="flex flex-col">
           <label className="text-[11px] font-extrabold text-gray-500 uppercase mb-1">
             Sale Price
           </label>
@@ -312,6 +317,28 @@ const RateTab: React.FC<TabProps> = ({
             }
           />
         </div>
+        <div className="flex flex-col">
+          <label className="text-[11px] font-bold text-gray-500 uppercase">Minimum Stock</label>
+          <input type="number" className={inputStyle} value={data.minStock} onChange={(e) => setData({ ...data, minStock: parseFloat(e.target.value) || 0 })} />
+        </div>
+        <div className="flex flex-col">
+          <label className="text-[11px] font-bold text-gray-500 uppercase">Reorder Level</label>
+          <input type="number" className={inputStyle} value={data.reorderLevel} onChange={(e) => setData({ ...data, reorderLevel: parseFloat(e.target.value) || 0 })} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+        {([
+          ["Track Stock", "trackStock"],
+          ["Track Serial Number", "trackSerial"],
+          ["Track Batch", "trackBatch"],
+          ["Active", "isActive"],
+        ] as const).map(([label, field]) => (
+          <label key={field} className="flex items-center gap-3 border rounded-lg px-4 py-3 text-sm font-semibold text-[#0b2c52]">
+            <input type="checkbox" checked={data[field]} onChange={(e) => setData({ ...data, [field]: e.target.checked })} className="w-4 h-4 accent-[#0b2c52]" />
+            {label}
+          </label>
+        ))}
       </div>
     </div>
   );

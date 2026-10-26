@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useProductDropdowns } from "./Hooks/useProductDropdowns";
-import { saveProduct } from "./Services/ProductService";
+import { getGeneratedProductCode, saveProduct } from "./Services/ProductService";
 import ProductInfoTab from "./Tabs/ProductInfoTab";
 import BriefInfoTab from "./Tabs/BriefInfoTab";
 import OtherInfoTab from "./Tabs/OtherInfoTab";
@@ -33,6 +33,7 @@ const ProductWizard = ({ editData, onSuccess, onCancel }: any) => {
       productId: 0,
       vendorId: 0,
       productName: "",
+      productSKU: "",
       productSource: "Local",
       bcd: 0,
       sws: 0,
@@ -42,6 +43,13 @@ const ProductWizard = ({ editData, onSuccess, onCancel }: any) => {
       salePrice: 0,
       availableQuantity: 0,
       outOfStockWarning: 5,
+      minStock: 0,
+      reorderLevel: 0,
+      mrp: 0,
+      trackStock: true,
+      trackSerial: false,
+      trackBatch: false,
+      isActive: true,
       hasAccessories: "No",
       taxPreference: "Taxable",
       isCalibration: false,
@@ -80,6 +88,13 @@ const ProductWizard = ({ editData, onSuccess, onCancel }: any) => {
       hasErrors = true;
     } else {
       delete newErrors.productName;
+    }
+
+    if (!data.productSKU?.trim()) {
+      newErrors.productSKU = ["Product SKU is required"];
+      hasErrors = true;
+    } else {
+      delete newErrors.productSKU;
     }
 
     setErrors(newErrors);
@@ -124,15 +139,41 @@ const ProductWizard = ({ editData, onSuccess, onCancel }: any) => {
 
     setIsSaving(true);
     try {
-      await saveProduct(data);
+      let productToSave = data;
+      if (!productToSave.productCode?.trim()) {
+        const productCode = await getGeneratedProductCode(
+          productToSave.vendorId,
+          productToSave.productSource || "Local",
+        );
+        if (!productCode.trim()) {
+          throw new Error("The server did not return a product code.");
+        }
+        productToSave = { ...productToSave, productCode };
+        setData(productToSave);
+      }
+
+      await saveProduct(productToSave);
       toast.success(
         data.productId > 0
           ? "Product updated successfully"
           : "Product created successfully",
       );
       onSuccess();
-    } catch {
-      toast.error("An error occurred while saving");
+    } catch (error) {
+      const apiError = error as {
+        message?: string;
+        response?: { data?: { message?: string; errors?: Record<string, string[]> } | string };
+      };
+      const responseData = apiError.response?.data;
+      const productCodeError =
+        typeof responseData === "object" && responseData?.errors?.ProductCode?.[0];
+      const errorMessage =
+        productCodeError ||
+        (typeof responseData === "string" ? responseData : undefined) ||
+        (typeof responseData === "object" ? responseData?.message : undefined) ||
+        apiError.message ||
+        "An error occurred while saving";
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -142,7 +183,7 @@ const ProductWizard = ({ editData, onSuccess, onCancel }: any) => {
   const hasErrorsInTab = (tabIndex: number): boolean => {
     switch (tabIndex) {
       case 0:
-        return !!errors.vendorId || !!errors.productName;
+        return !!errors.vendorId || !!errors.productName || !!errors.productSKU;
       default:
         return false;
     }

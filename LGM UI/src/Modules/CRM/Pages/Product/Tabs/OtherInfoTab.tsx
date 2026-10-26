@@ -48,6 +48,33 @@ const OtherInfoTab: React.FC<TabProps> = ({
           />
         </div>
 
+        <SearchableSelect
+          label="Select Unit"
+          options={options.units}
+          value={data.unitId}
+          onChange={(v) => setData({ ...data, unitId: v })}
+        />
+
+        <SearchableSelect
+          label="Select Tax"
+          options={options.taxes}
+          value={data.taxId}
+          onChange={(v) => setData({ ...data, taxId: v })}
+        />
+
+        <SearchableSelect
+          label="Base Currency"
+          options={options.currencies}
+          value={data.currencyId}
+          onChange={(v) => setData({ ...data, currencyId: v })}
+          onAdd={() => onAddMaster("currency")}
+        />
+
+        <div className="flex flex-col">
+          <label className="text-[11px] font-extrabold text-gray-500 uppercase mb-1">Part Number</label>
+          <input className={inputStyle} value={data.partNo || ""} onChange={(e) => setData({ ...data, partNo: e.target.value })} />
+        </div>
+
         {/* Unit of Measurement */}
         <div className="flex flex-col">
           <label className="text-[11px] font-extrabold text-gray-500 uppercase mb-1">

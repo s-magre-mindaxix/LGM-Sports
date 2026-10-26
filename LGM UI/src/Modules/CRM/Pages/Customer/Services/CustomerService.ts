@@ -15,14 +15,17 @@ const convertToFormData = (data: Customer): FormData => {
   // Basic Info
   formData.append("Id", (data.id || 0).toString());
   formData.append("CustomerName", data.customerName || "");
-  formData.append("CustomerCode", data.customerCode || "");
+  formData.append("CustomerCode", data.customerCode || ""); if (!data.customerCode?.trim()) {
+    throw new Error("Customer code is missing. Please generate it before saving.");
+  }
+  formData.append("CustomerCode", data.customerCode.trim());
   formData.append("CustomerShortName", data.customerShortName || "");
   formData.append("Branch", data.branch || "");
   formData.append("PlantCode", data.plantCode || "");
   formData.append("CompanyGroupId", (data.companyGroupId || 0).toString());
   //if (data.vendorId) formData.append("VendorId", data.vendorId.toString());
   formData.append("VendorCode", data.vendorCode || "");
-   formData.append("ForeignVendorCode", data.foreignVendorCode || "");
+  formData.append("ForeignVendorCode", data.foreignVendorCode || "");
   // Legal/Tax Info
   formData.append("CustomerPAN", data.customerPAN || "");
   formData.append("CustomerTAN", data.customerTAN || "");
@@ -88,9 +91,33 @@ export const deleteCustomer = async (id: number) => {
   return await apiClient.delete(`${ENDPOINT}/${id}`);
 };
 
+
+
 export const getGeneratedCustomerCode = async (): Promise<string> => {
   const response = await apiClient.get(
-    `${API_ENDPOINTS.Customer}/generate-code`,
+    `${API_ENDPOINTS.Customer}/generate-code`
   );
-  return response.data;
+
+  console.log("Generated customer code API response:", response.data);
+
+  // Handle either a plain string or an object response
+  const result = response.data;
+
+  if (typeof result === "string") {
+    return result;
+  }
+
+  const code =
+    result?.customerCode ??
+    result?.CustomerCode ??
+    result?.data?.customerCode ??
+    result?.data?.CustomerCode ??
+    result?.data;
+
+  if (typeof code !== "string" || !code.trim()) {
+    throw new Error("Customer code was missing from the API response.");
+  }
+
+  return code.trim();
 };
+

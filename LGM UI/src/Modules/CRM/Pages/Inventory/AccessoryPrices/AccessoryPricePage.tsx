@@ -22,8 +22,74 @@ import ListingLayout from "../../../../../Components/Common/ListingLayout";
 import { actionButtonStyles } from "../../../../../Components/Common/buttonStyles";
 import { usePermissions } from "../../../../../hooks/usePermissions";
 
+import apiClient from "../../../../../API/apiClient";
+import { API_ENDPOINTS } from "../../../../../API/apiConfig";
+
+interface LookupItem {
+  id: number;
+  name: string;
+}
+
+const getArray = (response: any): any[] => {
+  const result = response?.data;
+
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.data)) return result.data;
+  if (Array.isArray(result?.items)) return result.items;
+
+  return [];
+};
+
+const mapLookup = (
+  records: any[],
+  type: "accessory" | "priceList"
+): LookupItem[] =>
+  records
+    .map((record) => {
+      const id = Number(
+        type === "accessory"
+          ? record.accessoryId ??
+              record.AccessoryId ??
+              record.accessoriesId ??
+              record.AccessoriesId ??
+              record.id ??
+              record.Id
+          : record.priceListId ??
+              record.PriceListId ??
+              record.id ??
+              record.Id
+      );
+
+      const name =
+        type === "accessory"
+          ? record.accessoryName ??
+            record.AccessoryName ??
+            record.accessoriesName ??
+            record.AccessoriesName ??
+            record.name ??
+            record.Name
+          : record.priceListName ??
+            record.PriceListName ??
+            record.name ??
+            record.Name;
+
+      return {
+        id,
+        name: String(name ?? ""),
+      };
+    })
+    .filter(
+      (item) =>
+        Number.isInteger(item.id) &&
+        item.id > 0 &&
+        item.name.trim() !== ""
+    );
+
 const AccessoryPricePage: React.FC = () => {
   const [items, setItems] = useState<AccessoryPriceListItem[]>([]);
+  const [accessories, setAccessories] = useState<LookupItem[]>([]);
+  const [priceLists, setPriceLists] = useState<LookupItem[]>([]);
+
   const [showWizard, setShowWizard] = useState(false);
   const [editData, setEditData] = useState<AccessoryPrice | null>(null);
   const [viewData, setViewData] = useState<AccessoryPrice | null>(null);
@@ -36,7 +102,7 @@ const AccessoryPricePage: React.FC = () => {
   const canEdit = hasPermission("AccessoryPrice", "CanEdit");
   const canDelete = hasPermission("AccessoryPrice", "CanDelete");
 
-  // Load accessory price records
+  // Load accessory price records.
   const loadItems = async () => {
     setIsLoading(true);
 
@@ -50,12 +116,51 @@ const AccessoryPricePage: React.FC = () => {
     }
   };
 
-  // Load records on mount and listen for refresh events
+  // Load names used by the listing.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLookupData = async () => {
+      try {
+        const [priceListResponse, accessoryResponse] =
+          await Promise.all([
+            apiClient.get(
+              API_ENDPOINTS.PriceList || "/PriceLists"
+            ),
+            apiClient.get(
+              API_ENDPOINTS.Accessories || "/Accessories"
+            ),
+          ]);
+
+        if (cancelled) return;
+
+        setPriceLists(
+          mapLookup(getArray(priceListResponse), "priceList")
+        );
+
+        setAccessories(
+          mapLookup(getArray(accessoryResponse), "accessory")
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load accessory and price list names:",
+          error
+        );
+      }
+    };
+
+    void loadLookupData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Load records on mount and listen for refresh events.
   useEffect(() => {
     void loadItems();
 
     const refresh = () => void loadItems();
-
     window.addEventListener("app-refresh", refresh);
 
     return () => {
@@ -63,7 +168,20 @@ const AccessoryPricePage: React.FC = () => {
     };
   }, []);
 
-  // View accessory price details
+  const getPriceListName = (id: number) =>
+    priceLists.find((item) => item.id === Number(id))?.name ??
+    `Price List #${id}`;
+
+  const getAccessoryName = (row: AccessoryPriceListItem) => {
+    const id = Number(row.accessoriesId || 0);
+
+    return (
+      accessories.find((item) => item.id === id)?.name ??
+      `Accessory #${id || "N/A"}`
+    );
+  };
+
+  // View accessory price details.
   const handleView = async (id: number) => {
     setIsLoading(true);
 
@@ -78,7 +196,7 @@ const AccessoryPricePage: React.FC = () => {
     }
   };
 
-  // Edit accessory price
+  // Edit accessory price.
   const handleEdit = async (id: number) => {
     setIsLoading(true);
 
@@ -104,7 +222,7 @@ const AccessoryPricePage: React.FC = () => {
     }
   };
 
-  // Delete accessory price
+  // Delete accessory price.
   const handleDelete = async (id: number) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this accessory price?"
@@ -121,7 +239,7 @@ const AccessoryPricePage: React.FC = () => {
     }
   };
 
-  // Table columns
+  // Table columns.
   const columns: TableColumn<AccessoryPriceListItem>[] = [
     {
       name: "Sr. No.",
@@ -129,29 +247,28 @@ const AccessoryPricePage: React.FC = () => {
       width: "75px",
     },
     {
-      name: "Price ID",
-      selector: (row) => row.accessoryPriceId,
+      name: "Price List Name",
+      cell: (row) => getPriceListName(row.priceListId),
       sortable: true,
-      width: "100px",
+      sortFunction: (a, b) =>
+        getPriceListName(a.priceListId).localeCompare(
+          getPriceListName(b.priceListId)
+        ),
+      grow: 1.3,
     },
     {
-      name: "Price List ID",
-      selector: (row) => row.priceListId,
+      name: "Accessory Name",
+      cell: (row) => getAccessoryName(row),
       sortable: true,
-      width: "120px",
-    },
-    {
-      name: "Accessory ID",
-      selector: (row) =>
-        row.accessoryId || row.accessoriesId || "N/A",
-      sortable: true,
-      width: "120px",
+      sortFunction: (a, b) =>
+        getAccessoryName(a).localeCompare(getAccessoryName(b)),
+      grow: 1.5,
     },
     {
       name: "Price Type",
       selector: (row) => row.priceType,
       sortable: true,
-      grow: 1.3,
+      grow: 1.2,
     },
     {
       name: "Amount",
@@ -227,16 +344,21 @@ const AccessoryPricePage: React.FC = () => {
     },
   ];
 
-  // Filter accessory price records
-  const filteredItems = items.filter((item) =>
-    JSON.stringify(item)
-      .toLowerCase()
-      .includes(filterText.toLowerCase())
-  );
+  // Search by names as well as existing record fields.
+  const filteredItems = items.filter((item) => {
+    const searchText = [
+      JSON.stringify(item),
+      getPriceListName(item.priceListId),
+      getAccessoryName(item),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return searchText.includes(filterText.toLowerCase());
+  });
 
   return (
     <div className="min-h-screen space-y-6 bg-[#f5f6fa] p-4">
-      {/* Create or edit accessory price */}
       {showWizard && (
         <AccessoryPriceWizard
           editData={editData}
@@ -252,7 +374,6 @@ const AccessoryPricePage: React.FC = () => {
         />
       )}
 
-      {/* View accessory price details */}
       {viewData && (
         <AccessoryPriceViewModal
           item={viewData}
@@ -260,7 +381,6 @@ const AccessoryPricePage: React.FC = () => {
         />
       )}
 
-      {/* Accessory price listing */}
       <ListingLayout
         title="Listing of Accessory Prices"
         columns={columns}

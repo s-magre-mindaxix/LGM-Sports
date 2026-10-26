@@ -20,6 +20,7 @@ const ProductInfoTab: React.FC<TabProps> = ({
     `w-full border ${hasError ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition bg-white text-sm`;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [vendors, setVendors] = useState<any[]>([]);
+  const [productCodeError, setProductCodeError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadVendors = async () => {
@@ -59,6 +60,7 @@ const ProductInfoTab: React.FC<TabProps> = ({
   useEffect(() => {
     const generateCode = async () => {
       if (data.productId === 0 && data.vendorId > 0) {
+        setProductCodeError(null);
         try {
           const code = await getGeneratedProductCode(
             data.vendorId,
@@ -66,10 +68,19 @@ const ProductInfoTab: React.FC<TabProps> = ({
           );
           setData((prev) => ({ ...prev, productCode: code }));
         } catch (error) {
-          console.error("Error generating code", error);
+          const apiError = error as {
+            response?: { data?: { message?: string } | string };
+          };
+          const responseMessage = apiError.response?.data;
+          setProductCodeError(
+            typeof responseMessage === "string"
+              ? responseMessage
+              : responseMessage?.message || "Could not generate product code.",
+          );
         }
       }
       if (data.vendorId === 0) {
+        setProductCodeError(null);
         setData((prev) => ({ ...prev, productCode: "" }));
       }
     };
@@ -128,12 +139,15 @@ const ProductInfoTab: React.FC<TabProps> = ({
           </label>
           <input
             className="w-full border border-gray-300 rounded-lg px-4 py-2 outline-none bg-gray-50 font-mono font-bold text-blue-700"
-            value={data.productCode || "Waiting for Name..."}
+            value={data.productCode || "Select vendor to generate..."}
             readOnly
           />
           <p className="text-[10px] text-gray-400 mt-1 italic">
-            * Generated based on Product Name
+            * Generated from Vendor and Product Source
           </p>
+          {productCodeError && (
+            <p className="text-xs text-red-600 mt-1">{productCodeError}</p>
+          )}
         </div>
 
         {/* Vendor (Required) */}
@@ -199,6 +213,12 @@ const ProductInfoTab: React.FC<TabProps> = ({
           onAdd={() => onAddMaster("group")}
         />
         <SearchableSelect
+          label="Select Brand"
+          options={options.brands}
+          value={data.brandId}
+          onChange={(val) => setData({ ...data, brandId: val })}
+        />
+        <SearchableSelect
           label="Select Category"
           options={options.categories}
           value={data.categoryId}
@@ -212,6 +232,20 @@ const ProductInfoTab: React.FC<TabProps> = ({
           onChange={(val) => setData({ ...data, productTypeId: val })}
           onAdd={() => onAddMaster("type")}
         />
+
+        {/* Product Name (Required) */}
+        <div className="flex flex-col">
+          <label className="text-[11px] font-extrabold text-gray-500 uppercase mb-1 tracking-widest">
+            Product SKU <span className="text-red-500">*</span>
+          </label>
+          <input
+            className={inputStyle(!!errors.productSKU)}
+            placeholder="Enter product SKU"
+            value={data.productSKU || ""}
+            onChange={(e) => setData({ ...data, productSKU: e.target.value })}
+          />
+          {errors.productSKU && <p className="mt-1 text-sm text-red-500">{errors.productSKU[0]}</p>}
+        </div>
 
         {/* Product Name (Required) */}
         <div className="flex flex-col">

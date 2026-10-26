@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from "react";
 import { type TableColumn } from "react-data-table-component";
 import { FaEdit, FaTrash, FaEye } from "react-icons/fa";
@@ -17,26 +18,56 @@ import ListingLayout from "../../../../Components/Common/ListingLayout";
 import { actionButtonStyles } from "../../../../Components/Common/buttonStyles";
 import { usePermissions } from "../../../../hooks/usePermissions";
 
+import apiClient from "../../../../API/apiClient";
+import { API_ENDPOINTS } from "../../../../API/apiConfig";
+
+interface CompanyGroupLookup {
+  id: number;
+  name: string;
+}
+
+const getResponseArray = (response: any): any[] => {
+  const result = response?.data ?? response;
+
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.data)) return result.data;
+  if (Array.isArray(result?.items)) return result.items;
+  if (Array.isArray(result?.result)) return result.result;
+  if (Array.isArray(result?.$values)) return result.$values;
+
+  return [];
+};
+
 const CustomerPage: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [companyGroups, setCompanyGroups] = useState<CompanyGroupLookup[]>([]);
+
   const [showWizard, setShowWizard] = useState(false);
   const [editData, setEditData] = useState<Customer | null>(null);
   const [viewData, setViewData] = useState<Customer | null>(null);
+
   const [filterText, setFilterText] = useState("");
-  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: 0 });
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    id: 0,
+  });
   const [isLoading, setIsLoading] = useState(false);
 
   const { hasPermission } = usePermissions();
+
   const canAdd = hasPermission("Customer", "CanAdd");
   const canEdit = hasPermission("Customer", "CanEdit");
   const canDelete = hasPermission("Customer", "CanDelete");
 
+  // Load customers.
   const loadData = async () => {
     setIsLoading(true);
+
     try {
-      const data = await getCustomers();
-      setCustomers(Array.isArray(data) ? data : []);
-    } catch {
+      const response = await getCustomers();
+      setCustomers(Array.isArray(response) ? response : []);
+    } catch (error) {
+      console.error("Failed to load customers:", error);
       toast.error("Failed to load customers");
       setCustomers([]);
     } finally {
@@ -44,10 +75,64 @@ const CustomerPage: React.FC = () => {
     }
   };
 
+  // Load Company Groups separately and map their names using IDs.
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+
+    const loadCompanyGroups = async () => {
+      try {
+        const endpoint =
+          API_ENDPOINTS.CompanyGroup || "/CompanyGroup";
+
+        const response = await apiClient.get(endpoint);
+
+        const groups: CompanyGroupLookup[] = getResponseArray(response)
+          .map((group: any) => ({
+            id: Number(
+              group.companyGroupId ??
+                group.CompanyGroupId ??
+                group.id ??
+                group.Id
+            ),
+            name: String(
+              group.companyGroupName ??
+                group.CompanyGroupName ??
+                group.name ??
+                group.Name ??
+                ""
+            ).trim(),
+          }))
+          .filter(
+            (group) =>
+              Number.isInteger(group.id) &&
+              group.id > 0 &&
+              group.name.length > 0
+          );
+
+        if (!cancelled) {
+          setCompanyGroups(groups);
+        }
+      } catch (error) {
+        console.error("Failed to load Company Groups:", error);
+        if (!cancelled) {
+          setCompanyGroups([]);
+        }
+      }
+    };
+
+    void loadCompanyGroups();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Load customer records and listen for refresh events.
+  useEffect(() => {
+    void loadData();
+
     const handleRefresh = () => {
-      loadData();
+      void loadData();
     };
 
     window.addEventListener("app-refresh", handleRefresh);
@@ -57,69 +142,124 @@ const CustomerPage: React.FC = () => {
     };
   }, []);
 
+  // Resolve Company Group name using companyGroupId.
+  const getCompanyGroupName = (
+    companyGroupId?: number | null
+  ): string => {
+    if (companyGroupId == null || Number(companyGroupId) <= 0) {
+      return "N/A";
+    }
+
+    const group = companyGroups.find(
+      (item) => item.id === Number(companyGroupId)
+    );
+
+    return group?.name ?? `Company Group #${companyGroupId}`;
+  };
+
+  // View customer details.
   const handleView = async (id: number) => {
     setIsLoading(true);
+
     try {
       const data = await getCustomerById(id);
       setViewData(data);
-    } catch {
+    } catch (error) {
+      console.error("Could not fetch customer details:", error);
       toast.error("Could not fetch customer details");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Edit customer.
   const handleEdit = async (id: number) => {
     setIsLoading(true);
+
     try {
       const data = await getCustomerById(id);
+
       setEditData(data);
       setShowWizard(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch {
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
       toast.error("Error fetching customer details");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Delete customer.
   const handleDelete = async () => {
     try {
       await deleteCustomer(deleteModal.id);
+
       toast.success("Customer deleted successfully");
-      loadData();
-      setDeleteModal({ isOpen: false, id: 0 });
-    } catch {
+
+      setDeleteModal({
+        isOpen: false,
+        id: 0,
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error("Error deleting customer:", error);
       toast.error("Error deleting customer");
     }
   };
 
-  const getFullAddress = (c: Customer) => {
-    const a =
-      c.addresses?.find((addr) => addr.addressType === "Correspondence") ||
-      c.addresses?.[0];
-    if (!a) return "N/A";
-    return [a.flatBlockNo, a.premisesName, a.area, a.town]
+  // Build the customer's full address.
+  const getFullAddress = (customer: Customer) => {
+    const address =
+      customer.addresses?.find(
+        (item) => item.addressType === "Correspondence"
+      ) || customer.addresses?.[0];
+
+    if (!address) return "N/A";
+
+    return [
+      address.flatBlockNo,
+      address.premisesName,
+      address.area,
+      address.town,
+    ]
       .filter(Boolean)
-      .join(", ");
+      .join(", ") || "N/A";
   };
 
+  // Table columns.
   const columns: TableColumn<Customer>[] = [
     {
       name: "Sr. No.",
-      selector: (_, i) => (i ?? 0) + 1,
-      width: "60px",
+      selector: (_, index) => (index ?? 0) + 1,
+      width: "75px",
       sortable: true,
     },
     {
       name: "Company Group",
-      selector: (row) => row.companyGroupName || "N/A",
+      selector: (row) =>
+        getCompanyGroupName(row.companyGroupId),
+      cell: (row) => (
+        <span className="font-medium text-gray-700">
+          {getCompanyGroupName(row.companyGroupId)}
+        </span>
+      ),
       sortable: true,
+      sortFunction: (a, b) =>
+        getCompanyGroupName(a.companyGroupId).localeCompare(
+          getCompanyGroupName(b.companyGroupId)
+        ),
       grow: 2,
+      wrap: true,
     },
     {
       name: "Company Name",
-      selector: (row) => row.customerName,
+      selector: (row) => row.customerName || "N/A",
       sortable: true,
       grow: 2,
       wrap: true,
@@ -153,24 +293,34 @@ const CustomerPage: React.FC = () => {
       cell: (row) => (
         <div className="flex justify-center gap-4">
           <button
-            onClick={() => handleView(row.id)}
+            type="button"
+            onClick={() => void handleView(row.id)}
             className={`${actionButtonStyles.base} ${actionButtonStyles.view}`}
             title="View"
           >
             <FaEye size={16} />
           </button>
+
           {canEdit && (
             <button
-              onClick={() => handleEdit(row.id)}
+              type="button"
+              onClick={() => void handleEdit(row.id)}
               className={`${actionButtonStyles.base} ${actionButtonStyles.edit}`}
               title="Edit"
             >
               <FaEdit size={16} />
             </button>
           )}
+
           {canDelete && (
             <button
-              onClick={() => setDeleteModal({ isOpen: true, id: row.id })}
+              type="button"
+              onClick={() =>
+                setDeleteModal({
+                  isOpen: true,
+                  id: row.id,
+                })
+              }
               className={`${actionButtonStyles.base} ${actionButtonStyles.delete}`}
               title="Delete"
             >
@@ -183,30 +333,36 @@ const CustomerPage: React.FC = () => {
     },
   ];
 
+  // Search customers by their fields and resolved Company Group name.
   const filteredItems = useMemo(() => {
-    const search = filterText.toLowerCase();
+    const search = filterText.trim().toLowerCase();
+
+    if (!search) return customers;
 
     return customers.filter((item) => {
       return (
         (item.customerName || "").toLowerCase().includes(search) ||
         (item.customerCode || "").toLowerCase().includes(search) ||
         (item.vendorCode || "").toLowerCase().includes(search) ||
-        (item.companyGroupName || "").toLowerCase().includes(search) ||
-        (item.branch || "").toLowerCase().includes(search)
+        (item.branch || "").toLowerCase().includes(search) ||
+        String(item.companyGroupId ?? "").includes(search) ||
+        getCompanyGroupName(item.companyGroupId)
+          .toLowerCase()
+          .includes(search)
       );
     });
-  }, [customers, filterText]);
+  }, [customers, companyGroups, filterText]);
 
   return (
-    <div className="p-4 bg-[#f5f6fa] min-h-screen space-y-6">
+    <div className="min-h-screen space-y-6 bg-[#f5f6fa] p-4">
       {showWizard && (
         <div className="animate-in slide-in-from-top duration-500">
           <CustomerWizard
             editData={editData}
             onSuccess={() => {
               setShowWizard(false);
-              loadData();
               setEditData(null);
+              void loadData();
             }}
             onCancel={() => {
               setShowWizard(false);
@@ -242,7 +398,12 @@ const CustomerPage: React.FC = () => {
 
       <ConfirmationModal
         isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+        onClose={() =>
+          setDeleteModal({
+            isOpen: false,
+            id: 0,
+          })
+        }
         onConfirm={handleDelete}
         title="Delete Customer"
         message="Are you sure you want to delete this customer? This action cannot be undone."

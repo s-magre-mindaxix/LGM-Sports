@@ -4,6 +4,7 @@ export interface Product {
   vendorName?: string;
   vendorCode?: string;
   productCode?: string;
+  productSKU: string;
   productName: string;
   productShortName?: string;
   companyNameOfProduct?: string;
@@ -12,11 +13,15 @@ export interface Product {
 
   productGroupId?: number;
   categoryId?: number;
+  brandId?: number;
   productTypeId?: number;
   variantId?: number;
   versionId?: number;
   currencyId?: number;
   partConditionId?: number;
+  unitId?: number;
+  taxId?: number;
+  partNo?: string;
 
   productDescription?: string;
   specification?: string;
@@ -32,10 +37,17 @@ export interface Product {
 
   purchasePrice: number;
   salePrice: number;
+  mrp: number;
   taxPreference?: string;
   taxRateId?: number;
   availableQuantity: number;
   outOfStockWarning: number;
+  minStock: number;
+  reorderLevel: number;
+  trackStock: boolean;
+  trackSerial: boolean;
+  trackBatch: boolean;
+  isActive: boolean;
   isCalibration: boolean;
   calibrationFrequency?: string;
   productSource: "Local" | "Imported";
@@ -58,6 +70,7 @@ export interface ProductListItem {
   vendorName: string;
   vendorCode: string;
   productCode: string;
+  productSKU?: string;
   partNo?: string;
   ProductDescription?: string;
   productName: string;

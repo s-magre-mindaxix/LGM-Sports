@@ -1,14 +1,21 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { DocumentSeries } from "./Services/types";
 import { saveDocumentSeries } from "./Services/DocumentSeriesService";
 import { toast } from "sonner";
 import { buttonStyles } from "../../../../../Components/Common/buttonStyles";
+import apiClient from "../../../../../API/apiClient";
+import { API_ENDPOINTS } from "../../../../../API/apiConfig";
 
 interface WizardProps {
   editData: DocumentSeries | null;
   onSuccess: () => void;
   onCancel: () => void;
+}
+
+interface BranchOption {
+  id: number;
+  name: string;
 }
 
 const emptySeries: DocumentSeries = {
@@ -19,6 +26,172 @@ const emptySeries: DocumentSeries = {
   financialYear: "",
   branchId: 0,
   isDeleted: false,
+};
+
+const getResponseArray = (response: any): any[] => {
+  const result = response?.data ?? response;
+
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.data)) return result.data;
+  if (Array.isArray(result?.items)) return result.items;
+  if (Array.isArray(result?.result)) return result.result;
+  if (Array.isArray(result?.$values)) return result.$values;
+
+  return [];
+};
+
+const getFirstValue = (item: any, keys: string[]) => {
+  for (const key of keys) {
+    if (item?.[key] !== undefined && item?.[key] !== null) {
+      return item[key];
+    }
+  }
+
+  return undefined;
+};
+
+const SearchableBranchDropdown: React.FC<{
+  value: number;
+  options: BranchOption[];
+  loading: boolean;
+  error?: string;
+  onChange: (id: number) => void;
+  inputClass: string;
+  labelClass: string;
+}> = ({
+  value,
+  options,
+  loading,
+  error,
+  onChange,
+  inputClass,
+  labelClass,
+}) => {
+  const [search, setSearch] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const selectedBranch = options.find(
+    (branch) => branch.id === Number(value)
+  );
+
+  const filteredBranches = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) return options;
+
+    return options.filter(
+      (branch) =>
+        String(branch.id).includes(query) ||
+        branch.name.toLowerCase().includes(query) ||
+        `${branch.id} - ${branch.name}`.toLowerCase().includes(query)
+    );
+  }, [options, search]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        rootRef.current &&
+        event.target instanceof Node &&
+        !rootRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+        setSearch("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <label htmlFor="branchSearch" className={labelClass}>
+        Branch *
+      </label>
+
+      <input
+        id="branchSearch"
+        type="text"
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-autocomplete="list"
+        autoComplete="off"
+        className={inputClass}
+        disabled={loading}
+        placeholder={
+          loading
+            ? "Loading branches..."
+            : selectedBranch
+              ? `${selectedBranch.id} - ${selectedBranch.name}`
+              : "Search branch by ID or name..."
+        }
+        value={
+          isOpen
+            ? search
+            : selectedBranch
+              ? `${selectedBranch.id} - ${selectedBranch.name}`
+              : ""
+        }
+        onFocus={() => {
+          setSearch("");
+          setIsOpen(true);
+        }}
+        onClick={() => setIsOpen(true)}
+        onChange={(event) => {
+          setSearch(event.target.value);
+          setIsOpen(true);
+        }}
+      />
+
+      {isOpen && !loading && (
+        <div
+          role="listbox"
+          className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+        >
+          {filteredBranches.length > 0 ? (
+            filteredBranches.map((branch) => (
+              <button
+                key={branch.id}
+                type="button"
+                role="option"
+                aria-selected={branch.id === Number(value)}
+                className={`block w-full px-3 py-2 text-left text-sm hover:bg-orange-50 ${
+                  branch.id === Number(value)
+                    ? "bg-orange-50 font-semibold text-[#154068]"
+                    : "text-gray-700"
+                }`}
+                onClick={() => {
+                  onChange(branch.id);
+                  setSearch("");
+                  setIsOpen(false);
+                }}
+              >
+                {branch.id} - {branch.name}
+              </button>
+            ))
+          ) : (
+            <p className="px-3 py-2 text-sm text-gray-500">
+              No matching branches found.
+            </p>
+          )}
+        </div>
+      )}
+
+      {loading && (
+        <p className="mt-1 text-xs text-gray-500">
+          Loading branches...
+        </p>
+      )}
+
+      {error && (
+        <p className="mt-1 text-xs text-red-600">{error}</p>
+      )}
+    </div>
+  );
 };
 
 const DocumentSeriesWizard: React.FC<WizardProps> = ({
@@ -33,7 +206,11 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Initialize form data for create or edit
+  const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+  const [branchLoadError, setBranchLoadError] = useState("");
+
+  // Initialize form data for create or edit.
   useEffect(() => {
     setData(
       editData
@@ -44,7 +221,84 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
     setErrors({});
   }, [editData]);
 
-  // Update form fields
+  // Load branch options from the backend.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBranches = async () => {
+      setIsLoadingBranches(true);
+      setBranchLoadError("");
+
+      try {
+        const endpoint = API_ENDPOINTS.Branch || "/Branch";
+        const response = await apiClient.get(endpoint);
+
+        const options: BranchOption[] = getResponseArray(response)
+          .map((branch: any) => {
+            const id = Number(
+              getFirstValue(branch, [
+                "branchId",
+                "BranchId",
+                "id",
+                "Id",
+              ])
+            );
+
+            const rawName = getFirstValue(branch, [
+              "branchName",
+              "BranchName",
+              "name",
+              "Name",
+              "branchCode",
+              "BranchCode",
+            ]);
+
+            return {
+              id,
+              name:
+                rawName == null || String(rawName).trim() === ""
+                  ? `Branch ${id}`
+                  : String(rawName).trim(),
+            };
+          })
+          .filter(
+            (branch) =>
+              Number.isInteger(branch.id) && branch.id > 0
+          )
+          .sort((a, b) => a.id - b.id);
+
+        if (!cancelled) {
+          setBranches(options);
+
+          if (options.length === 0) {
+            setBranchLoadError(
+              "No branches returned. Check the Branch API response."
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load branches:", error);
+
+        if (!cancelled) {
+          setBranchLoadError(
+            "Could not load branches. Check the Branch API endpoint."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingBranches(false);
+        }
+      }
+    };
+
+    void loadBranches();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Update form fields.
   const update = (
     field: keyof DocumentSeries,
     value: string | number
@@ -60,7 +314,7 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
     }));
   };
 
-  // Validate form fields
+  // Validate form fields.
   const validate = () => {
     const next: Record<string, string> = {};
 
@@ -101,7 +355,12 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
       !Number.isInteger(Number(data.branchId)) ||
       Number(data.branchId) <= 0
     ) {
-      next.branchId = "Enter a valid Branch ID.";
+      next.branchId = "Please select a valid Branch.";
+    } else if (
+      branches.length > 0 &&
+      !branches.some((branch) => branch.id === Number(data.branchId))
+    ) {
+      next.branchId = "Please select a branch from the list.";
     }
 
     setErrors(next);
@@ -109,7 +368,7 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
     return Object.keys(next).length === 0;
   };
 
-  // Save or update document series
+  // Save or update document series.
   const handleSave = async () => {
     if (!validate()) {
       toast.error("Please correct the highlighted fields.");
@@ -143,14 +402,12 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
     }
   };
 
-  // Common input styles
   const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-[#f07837] focus:ring-2 focus:ring-[#f07837]/20";
+    "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-[#f07837] focus:ring-2 focus:ring-[#f07837]/20 disabled:cursor-not-allowed disabled:bg-gray-100";
 
   const labelClass =
     "mb-1 block text-xs font-bold uppercase tracking-wide text-gray-600";
 
-  // Display validation errors
   const errorText = (key: string) =>
     errors[key] ? (
       <p className="mt-1 text-xs text-red-600">
@@ -160,7 +417,6 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
 
   return (
     <div className="mb-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
-      {/* Header */}
       <header className="bg-[#f07837] px-6 py-4 text-white">
         <h2 className="text-lg font-bold uppercase tracking-wide">
           {data.documentSeriesId
@@ -173,19 +429,14 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
         </p>
       </header>
 
-      {/* Form content */}
       <div className="p-5 sm:p-8">
         <h3 className="mb-5 border-b border-gray-200 pb-3 text-sm font-extrabold uppercase tracking-wide text-[#154068]">
           Series Information
         </h3>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          {/* Document Type */}
           <div>
-            <label
-              htmlFor="documentType"
-              className={labelClass}
-            >
+            <label htmlFor="documentType" className={labelClass}>
               Document Type *
             </label>
 
@@ -193,9 +444,7 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
               id="documentType"
               maxLength={50}
               value={data.documentType}
-              onChange={(e) =>
-                update("documentType", e.target.value)
-              }
+              onChange={(e) => update("documentType", e.target.value)}
               className={inputClass}
               placeholder="e.g. Invoice"
             />
@@ -203,7 +452,6 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
             {errorText("documentType")}
           </div>
 
-          {/* Prefix */}
           <div>
             <label htmlFor="prefix" className={labelClass}>
               Prefix *
@@ -213,9 +461,7 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
               id="prefix"
               maxLength={20}
               value={data.prefix}
-              onChange={(e) =>
-                update("prefix", e.target.value)
-              }
+              onChange={(e) => update("prefix", e.target.value)}
               className={inputClass}
               placeholder="e.g. INV"
             />
@@ -223,12 +469,8 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
             {errorText("prefix")}
           </div>
 
-          {/* Next Number */}
           <div>
-            <label
-              htmlFor="nextNumber"
-              className={labelClass}
-            >
+            <label htmlFor="nextNumber" className={labelClass}>
               Next Number *
             </label>
 
@@ -241,9 +483,7 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
               onChange={(e) =>
                 update(
                   "nextNumber",
-                  e.target.value === ""
-                    ? 0
-                    : Number(e.target.value)
+                  e.target.value === "" ? 0 : Number(e.target.value)
                 )
               }
               className={inputClass}
@@ -252,12 +492,8 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
             {errorText("nextNumber")}
           </div>
 
-          {/* Financial Year */}
           <div>
-            <label
-              htmlFor="financialYear"
-              className={labelClass}
-            >
+            <label htmlFor="financialYear" className={labelClass}>
               Financial Year *
             </label>
 
@@ -265,9 +501,7 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
               id="financialYear"
               maxLength={20}
               value={data.financialYear}
-              onChange={(e) =>
-                update("financialYear", e.target.value)
-              }
+              onChange={(e) => update("financialYear", e.target.value)}
               className={inputClass}
               placeholder="e.g. 2026-27"
             />
@@ -275,36 +509,20 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
             {errorText("financialYear")}
           </div>
 
-          {/* Branch ID */}
           <div>
-            <label htmlFor="branchId" className={labelClass}>
-              Branch ID *
-            </label>
-
-            <input
-              id="branchId"
-              type="number"
-              min="1"
-              step="1"
-              value={data.branchId || ""}
-              onChange={(e) =>
-                update(
-                  "branchId",
-                  e.target.value === ""
-                    ? 0
-                    : Number(e.target.value)
-                )
-              }
-              className={inputClass}
-              placeholder="Enter Branch ID"
+            <SearchableBranchDropdown
+              value={Number(data.branchId)}
+              options={branches}
+              loading={isLoadingBranches}
+              error={errors.branchId || branchLoadError}
+              onChange={(id) => update("branchId", id)}
+              inputClass={inputClass}
+              labelClass={labelClass}
             />
-
-            {errorText("branchId")}
           </div>
         </div>
       </div>
 
-      {/* Footer actions */}
       <footer className="flex flex-wrap justify-end gap-3 border-t bg-gray-50 p-5">
         <button
           type="button"
@@ -318,7 +536,7 @@ const DocumentSeriesWizard: React.FC<WizardProps> = ({
         <button
           type="button"
           onClick={() => void handleSave()}
-          disabled={isSaving}
+          disabled={isSaving || isLoadingBranches}
           className={buttonStyles.save}
         >
           {isSaving

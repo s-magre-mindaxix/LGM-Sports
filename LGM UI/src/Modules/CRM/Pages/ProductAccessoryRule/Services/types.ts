@@ -11,4 +11,16 @@ export interface ProductAccessoryRule {
   active: boolean;
   isDeleted: boolean;
 }
-export type ProductAccessoryRuleListItem = ProductAccessoryRule;
+
+export interface ProductAccessoryRuleListItem extends ProductAccessoryRule {
+  productName?: string | null;
+  productCode?: string | null;
+  accessoryName?: string | null;
+  accessoryCode?: string | null;
+}
+
+export interface ProductAccessoryRuleLookupOption {
+  id: number;
+  code: string;
+  name: string;
+}

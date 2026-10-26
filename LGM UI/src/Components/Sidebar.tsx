@@ -425,6 +425,12 @@ const crmMenuConfig: MenuItem[] = [
         to: "/crm/master/product",
         formName: "Product",
       },
+         {
+      icon: <Layers />,
+      label: "PRODUCT VARIANT",
+       to: "/crm/master/productvariant",
+      formName: "ProductVariant",
+    },
 
       {
   icon: <Barcode />,
