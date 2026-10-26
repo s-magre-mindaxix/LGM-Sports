@@ -1006,7 +1006,9 @@ const router = createBrowserRouter([
       { path: "loans", element: <LoansAndAdvances /> },
     ],
   },
-]);
+], {
+  basename: "/frontend",
+});
 
 const App: React.FC = () => {
   return <RouterProvider router={router} />;
